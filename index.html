@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>swarlechx</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --navy: #0d1b3e;
+            --navy-mid: #1a2a55;
+            --purple-dark: #2d1b69;
+            --glass-bg: rgba(13, 27, 62, 0.35);
+            --glass-border: rgba(100, 140, 255, 0.18);
+            --text-main: #e8eeff;
+            --text-dim: rgba(180, 200, 255, 0.55);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Syne', sans-serif;
+            background: #060d1f;
+            color: var(--text-main);
+            overflow-x: hidden;
+            cursor: none;
+        }
+
+        /* ── Custom Cursor ── */
+        #cursor {
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            background: rgba(100,160,255,0.9);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%,-50%);
+            transition: width .15s, height .15s, background .2s;
+            mix-blend-mode: screen;
+        }
+
+        #cursor-ring {
+            position: fixed;
+            width: 36px;
+            height: 36px;
+            border: 1.5px solid rgba(100,160,255,0.4);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9998;
+            transform: translate(-50%,-50%);
+            transition: transform .08s linear, width .2s, height .2s, border-color .2s;
+        }
+
+        body:has(a:hover) #cursor, body:has(.dl-link:hover) #cursor {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* ── Video Background ── */
+        #bg-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+            filter: brightness(0.35) saturate(1.4);
+        }
+
+        /* dark overlay gradient */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(13,27,62,0.55) 0%, transparent 70%), radial-gradient(ellipse 60% 80% at 50% 100%, rgba(45,27,105,0.45) 0%, transparent 70%), linear-gradient(180deg, rgba(6,13,31,0.5) 0%, rgba(6,13,31,0.15) 40%, rgba(6,13,31,0.7) 100%);
+            z-index: 1;
+        }
+
+        /* noise grain */
+        .grain {
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        /* ── Audio Player ── */
+        #audio-bar {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(13,27,62,0.6);
+            backdrop-filter: blur(18px);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            padding: 10px 18px;
+            transition: opacity .3s;
+        }
+
+            #audio-bar:hover {
+                opacity: 1 !important;
+            }
+
+        #play-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(100,160,255,0.5);
+            background: transparent;
+            cursor: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #a0c4ff;
+            font-size: 11px;
+            transition: background .2s, border-color .2s;
+        }
+
+            #play-btn:hover {
+                background: rgba(100,160,255,0.15);
+                border-color: #a0c4ff;
+            }
+
+        #song-name {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            max-width: 140px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #audio-wave {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+            height: 16px;
+        }
+
+            #audio-wave span {
+                display: block;
+                width: 2px;
+                border-radius: 2px;
+                background: rgba(100,160,255,0.6);
+                animation: wave 1.2s ease-in-out infinite;
+            }
+
+                #audio-wave span:nth-child(1) {
+                    height: 4px;
+                    animation-delay: 0s;
+                }
+
+                #audio-wave span:nth-child(2) {
+                    height: 10px;
+                    animation-delay: .2s;
+                }
+
+                #audio-wave span:nth-child(3) {
+                    height: 7px;
+                    animation-delay: .4s;
+                }
+
+                #audio-wave span:nth-child(4) {
+                    height: 13px;
+                    animation-delay: .1s;
+                }
+
+                #audio-wave span:nth-child(5) {
+                    height: 5px;
+                    animation-delay: .3s;
+                }
+
+            #audio-wave.paused span {
+                animation-play-state: paused;
+            }
+
+        @keyframes wave {
+            0%,100% {
+                transform: scaleY(1);
+            }
+
+            50% {
+                transform: scaleY(2);
+            }
+        }
+
+        audio {
+            display: none;
+        }
+
+        /* ── Hero ── */
+        #hero {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        /* Glass card */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(28px) saturate(1.6);
+            -webkit-backdrop-filter: blur(28px) saturate(1.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            padding: 52px 72px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            animation: cardIn 1.2s cubic-bezier(.16,1,.3,1) both;
+        }
+
+        @keyframes cardIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(.97);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        /* inner glow shimmer */
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 28px;
+            background: linear-gradient(135deg, rgba(100,160,255,0.12) 0%, transparent 50%, rgba(120,60,220,0.08) 100%);
+            pointer-events: none;
+        }
+        /* corner accent */
+        .glass-card::after {
+            content: '';
+            position: absolute;
+            top: -60px;
+            right: -60px;
+            width: 180px;
+            height: 180px;
+            background: radial-gradient(circle, rgba(80,120,255,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 20px;
+            animation: fadeUp .8s .3s both;
+        }
+
+        .hero-name {
+            font-size: clamp(52px, 9vw, 96px);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1;
+            background: linear-gradient(135deg, #c8dcff 0%, #7eb8ff 35%, #a78bfa 70%, #c8dcff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: fadeUp .8s .45s both;
+            position: relative;
+        }
+
+        .hero-sub {
+            margin-top: 18px;
+            font-family: 'Space Mono', monospace;
+            font-size: 13px;
+            color: var(--text-dim);
+            letter-spacing: 0.12em;
+            animation: fadeUp .8s .6s both;
+        }
+
+        .scroll-hint {
+            margin-top: 48px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            animation: fadeUp .8s .9s both;
+            color: var(--text-dim);
+            font-size: 11px;
+            font-family: 'Space Mono', monospace;
+            letter-spacing: 0.2em;
+        }
+
+        .scroll-arrow {
+            width: 1px;
+            height: 40px;
+            background: linear-gradient(to bottom, rgba(100,160,255,0.6), transparent);
+            animation: scrollPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes scrollPulse {
+            0%,100% {
+                transform: scaleY(1);
+                opacity: .6;
+            }
+
+            50% {
+                transform: scaleY(1.3);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(18px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── Files Section ── */
+        #files {
+            position: relative;
+            z-index: 10;
+            min-height: 100vh;
+            padding: 80px 20px 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 64px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity .8s, transform .8s;
+        }
+
+            .section-header.visible {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+        .section-title {
+            font-size: 13px;
+            font-family: 'Space Mono', monospace;
+            letter-spacing: 0.35em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 12px;
+        }
+
+        .section-line {
+            width: 48px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(100,160,255,0.5), transparent);
+            margin: 0 auto;
+        }
+
+        .files-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            width: 100%;
+            max-width: 680px;
+        }
+
+        /* Download link item */
+        .dl-link {
+            display: block;
+            position: relative;
+            padding: 22px 32px;
+            background: rgba(13,27,62,0.3);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(100,140,255,0.12);
+            border-radius: 16px;
+            text-decoration: none;
+            overflow: hidden;
+            cursor: none;
+            opacity: 0;
+            transform: translateX(-24px);
+            transition: opacity .6s, transform .6s, border-color .3s, background .3s;
+        }
+
+            .dl-link.visible {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            .dl-link:hover {
+                border-color: rgba(100,160,255,0.3);
+                background: rgba(20,40,90,0.45);
+            }
+
+            /* RGB sweep on hover */
+            .dl-link .rgb-sweep {
+                position: absolute;
+                inset: 0;
+                border-radius: 16px;
+                opacity: 0;
+                transition: opacity .3s;
+                pointer-events: none;
+                background: linear-gradient( 135deg, rgba(13, 27, 62, 0) 0%, rgba(80, 120, 255, 0.08) 30%, rgba(120, 60, 220, 0.12) 60%, rgba(13, 27, 62, 0) 100% );
+                background-size: 300% 300%;
+                animation: rgbSweep 3s linear infinite;
+                animation-play-state: paused;
+            }
+
+            .dl-link:hover .rgb-sweep {
+                opacity: 1;
+                animation-play-state: running;
+            }
+
+        @keyframes rgbSweep {
+            0% {
+                background-position: 0% 0%;
+            }
+
+            100% {
+                background-position: 300% 300%;
+            }
+        }
+
+        .dl-link-inner {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .dl-name {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: var(--navy);
+            /* default: solid navy */
+            -webkit-text-fill-color: #c8d8ff;
+            transition: -webkit-text-fill-color .3s;
+        }
+
+        /* On hover, apply animated gradient text */
+        .dl-link:hover .dl-name {
+            background: linear-gradient( 135deg, #3060c8 0%, #6030a0 40%, #3060c8 80%, #6030a0 100% );
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rgbText 2.5s linear infinite;
+        }
+
+        @keyframes rgbText {
+            0% {
+                background-position: 0% 0%;
+            }
+
+            100% {
+                background-position: 300% 300%;
+            }
+        }
+
+        .dl-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        .dl-desc {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            margin-top: 4px;
+        }
+
+        .dl-tag {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            color: rgba(100,160,255,0.5);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            border: 1px solid rgba(100,160,255,0.15);
+            border-radius: 4px;
+            padding: 2px 8px;
+            flex-shrink: 0;
+            transition: color .3s, border-color .3s;
+        }
+
+        .dl-link:hover .dl-tag {
+            color: rgba(160,140,255,0.7);
+            border-color: rgba(160,140,255,0.3);
+        }
+
+        .dl-arrow {
+            flex-shrink: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            border: 1px solid rgba(100,160,255,0.15);
+            color: rgba(100,160,255,0.4);
+            font-size: 14px;
+            transition: border-color .3s, color .3s, transform .3s;
+        }
+
+        .dl-link:hover .dl-arrow {
+            border-color: rgba(160,140,255,0.4);
+            color: rgba(160,140,255,0.8);
+            transform: translateY(2px);
+        }
+
+        /* hover left accent bar */
+        .dl-link::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 20%;
+            bottom: 20%;
+            width: 2px;
+            border-radius: 2px;
+            background: linear-gradient(to bottom, #5080ff, #8040cc);
+            transform: scaleY(0);
+            transform-origin: center;
+            transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+        }
+
+        .dl-link:hover::before {
+            transform: scaleY(1);
+        }
+
+        /* ── Footer ── */
+        footer {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 40px 20px 60px;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: rgba(100,140,255,0.25);
+            letter-spacing: 0.2em;
+        }
+
+        /* ── Floating particles ── */
+        .particles {
+            position: fixed;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            border-radius: 50%;
+            background: rgba(100,160,255,0.5);
+            animation: drift linear infinite;
+        }
+
+        @keyframes drift {
+            from {
+                transform: translateY(100vh) translateX(0) scale(0);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: .5;
+            }
+
+            to {
+                transform: translateY(-10vh) translateX(var(--dx)) scale(1);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Custom cursor -->
+    <div id="cursor"></div>
+    <div id="cursor-ring"></div>
+
+    <!-- Background video: replace src with your video path -->
+    <video id="bg-video" autoplay muted loop playsinline>
+        <source src="bg.mp4" type="video/mp4">
+    </video>
+
+    <!-- Overlays -->
+    <div class="overlay"></div>
+    <div class="grain"></div>
+
+    <!-- Particles -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Audio -->
+    <audio id="bg-audio" loop>
+        <!-- Replace src with your music file path -->
+        <source src="music.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- Audio bar -->
+    <div id="audio-bar">
+        <button id="play-btn" title="Play / Pause">▶</button>
+        <div id="song-name">music.mp3</div>
+        <div id="audio-wave" class="paused">
+            <span></span><span></span><span></span><span></span><span></span>
+        </div>
+    </div>
+
+    <!-- ═══════════ HERO ═══════════ -->
+    <section id="hero">
+        <div class="glass-card">
+            <p class="hero-label">personal files &amp; projects</p>
+            <h1 class="hero-name">swarlechx</h1>
+            <p class="hero-sub">// code · tools · builds</p>
+        </div>
+        <div class="scroll-hint">
+            <span>scroll</span>
+            <div class="scroll-arrow"></div>
+        </div>
+    </section>
+
+    <!-- ═══════════ FILES ═══════════ -->
+    <section id="files">
+        <div class="section-header" id="sh">
+            <p class="section-title">files &amp; downloads</p>
+            <div class="section-line"></div>
+        </div>
+
+        <div class="files-grid" id="files-grid">
+
+            <!--
+              ───────────────────────────────────────────────────────────────────────
+              NASIL KULLANILIR:
+              Her .dl-link için href="" kısmına dosyanı koy.
+              .dl-name → Program / dosya adı
+              .dl-desc → Kısa açıklama
+              .dl-tag  → Kategori etiketi (örn: .exe / .zip / tool vb.)
+              ───────────────────────────────────────────────────────────────────────
+            -->
+
+            <a class="dl-link" href="files/StormInjectorV1.exe" download>
+                <div class="rgb-sweep"></div>
+                <div class="dl-link-inner">
+                    <div class="dl-meta">
+                        <span class="dl-name">Storm Injector</span>
+                        <span class="dl-desc">A simple, small, yet highly effective injector.. · C++</span>
+                    </div>
+                    <span class="dl-tag">.exe</span>
+                    <div class="dl-arrow">↓</div>
+                </div>
+            </a>
+
+            <a class="dl-link" href="files/StormInjectorV2.exe" download>
+                <div class="rgb-sweep"></div>
+                <div class="dl-link-inner">
+                    <div class="dl-meta">
+                        <span class="dl-name">Storm Injector V2</span>
+                        <span class="dl-desc">A Injector with Memory Hacking. · C++</span>
+                    </div>
+                    <span class="dl-tag">.exe</span>
+                    <div class="dl-arrow">↓</div>
+                </div>
+            </a>
+
+            <a class="dl-link" href="https://drive.google.com/uc?export=download&id=1uBbWutF5qhiTh-NHT65bYfWJqcr0HtIz" target="_blank">
+                <div class="rgb-sweep"></div>
+                <div class="dl-link-inner">
+                    <div class="dl-meta">
+                        <span class="dl-name">SwarX Injector</span>
+                        <span class="dl-desc">Just an Advanced Injector. · Python</span>
+                    </div>
+                    <span class="dl-tag">.exe</span>
+                    <div class="dl-arrow">↓</div>
+                </div>
+            </a>
+
+            <a class="dl-link" href="files/! §0§kf §1§l Kirou V1 §0§kf.rar" download>
+                <div class="rgb-sweep"></div>
+                <div class="dl-link-inner">
+                    <div class="dl-meta">
+                        <span class="dl-name">Kirou V1 </span>
+                        <span class="dl-desc">Just an texture pack · 1.8.9</span>
+                    </div>
+                    <span class="dl-tag">.rar</span>
+                    <div class="dl-arrow">↓</div>
+                </div>
+            </a>
+
+            <a class="dl-link" href="files/! §0§kf §1§l Kirou V2 §0§kf.zip" download>
+                <div class="rgb-sweep"></div>
+                <div class="dl-link-inner">
+                    <div class="dl-meta">
+                        <span class="dl-name">Kirou V2</span>
+                        <span class="dl-desc">Just an texture pack · 1.8.9</span>
+                    </div>
+                    <span class="dl-tag">.zip</span>
+                    <div class="dl-arrow">↓</div>
+                </div>
+            </a>
+
+        </div>
+    </section>
+
+    <footer>swarlechx &nbsp;·&nbsp; all rights reserved</footer>
+
+    <script>
+        /* ── Cursor ── */
+        const cur = document.getElementById('cursor');
+        const ring = document.getElementById('cursor-ring');
+        let mx=0, my=0, rx=0, ry=0;
+        document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+        function animCursor() {
+        cur.style.left = mx + 'px';
+        cur.style.top  = my + 'px';
+        rx += (mx - rx) * 0.12;
+        ry += (my - ry) * 0.12;
+        ring.style.left = rx + 'px';
+        ring.style.top  = ry + 'px';
+        requestAnimationFrame(animCursor);
+        }
+        animCursor();
+
+        /* ── Particles ── */
+        const pc = document.getElementById('particles');
+        for (let i = 0; i < 28; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const left = Math.random() * 100;
+        const dur  = 12 + Math.random() * 18;
+        const dx   = (Math.random() - .5) * 120;
+        p.style.cssText = `
+        left: ${left}%;
+        bottom: -4px;
+        --dx: ${dx}px;
+        animation-duration: ${dur}s;
+        animation-delay: ${Math.random() * dur}s;
+        width: ${1 + Math.random() * 2}px;
+        height: ${1 + Math.random() * 2}px;
+        opacity: ${.3 + Math.random() * .7};
+        `;
+        pc.appendChild(p);
+        }
+
+        /* ── Scroll reveal ── */
+        const observer = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+        if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+        }
+        });
+        }, { threshold: 0.12 });
+
+        document.querySelectorAll('.section-header, .dl-link').forEach((el, i) => {
+        if (el.classList.contains('dl-link')) {
+        el.style.transitionDelay = (i * 0.08) + 's';
+        }
+        observer.observe(el);
+        });
+
+        /* ── Audio ── */
+        const audio  = document.getElementById('bg-audio');
+        const btn    = document.getElementById('play-btn');
+        const wave   = document.getElementById('audio-wave');
+        const sname  = document.getElementById('song-name');
+
+        // Update song name from audio src if possible
+        const src = audio.querySelector('source')?.src || '';
+        if (src) sname.textContent = src.split('/').pop();
+
+        btn.addEventListener('click', () => {
+        if (audio.paused) {
+        audio.play().catch(() => {});
+        btn.textContent = '⏸';
+        wave.classList.remove('paused');
+        } else {
+        audio.pause();
+        btn.textContent = '▶';
+        wave.classList.add('paused');
+        }
+        });
+
+        // autoplay attempt
+        window.addEventListener('click', () => {
+        if (audio.paused) {
+        audio.play().then(() => {
+        btn.textContent = '⏸';
+        wave.classList.remove('paused');
+        }).catch(() => {});
+        }
+        }, { once: true });
+    </script>
+</body>
+</html>
